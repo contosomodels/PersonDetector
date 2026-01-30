@@ -8,11 +8,13 @@ AI-powered person detection for images using ONNX Runtime and the Yolo-X model. 
 
 > **Windows Only**: This package requires Windows 10 SDK version 19041 or later and uses Windows-specific AI APIs.
 
+![Image of people detected](./DetectedPeople.png)
+
 ## ✨ Features
 
 - 🤖 **AI-Powered Detection** - Uses Qualcomm's Yolo-X ONNX model for accurate person detection
 - 📦 **Bounding Boxes** - Returns precise bounding boxes with confidence scores for each detected person
-- ⚡ **NPU Acceleration** - Hardware-accelerated inference via QNN Execution Provider
+- ⚡ **NPU Acceleration** - Hardware-accelerated inference via QNN Execution Provider (falls back to CPU on other devices)
 - 🪟 **Windows Native** - Built with Windows App SDK for optimal performance
 - 📦 **Easy Integration** - Simple NuGet package with automatic model download
 - 🔒 **Type Safe** - Full C# type safety with nullable reference types
