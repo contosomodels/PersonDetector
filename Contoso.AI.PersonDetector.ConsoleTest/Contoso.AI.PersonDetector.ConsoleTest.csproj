@@ -16,4 +16,11 @@
 		<ProjectReference Include="..\Contoso.AI.PersonDetector\Contoso.AI.PersonDetector.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.WindowsDesktop.App" />
+	</ItemGroup>
+
+	<!-- Import model download targets from referenced PersonDetector project -->
+	<Import Project="..\Contoso.AI.PersonDetector\build\Contoso.AI.PersonDetector.targets" />
+
 </Project>

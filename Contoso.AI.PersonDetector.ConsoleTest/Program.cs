@@ -1,5 +1,6 @@
 ﻿using Contoso.AI;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 
 Console.WriteLine("=== Contoso.AI.PersonDetector Console Test ===");
 Console.WriteLine();
@@ -79,6 +80,16 @@ try
             Console.WriteLine($"      Height: {person.BoundingBox.Height:F1}");
             Console.WriteLine();
         }
+
+        // Create annotated image with bounding boxes
+        Console.WriteLine("Creating annotated image with bounding boxes...");
+        using var annotatedImage = DrawBoundingBoxes(bitmap, result.People);
+        
+        // Copy to clipboard
+        Console.WriteLine("Copying annotated image to clipboard...");
+        CopyToClipboard(annotatedImage);
+        Console.WriteLine("✓ Annotated image copied to clipboard!");
+        Console.WriteLine();
     }
     else
     {
@@ -91,4 +102,65 @@ catch (Exception ex)
 {
     Console.WriteLine($"ERROR: {ex.GetType().Name}: {ex.Message}");
     Console.WriteLine($"Stack trace: {ex.StackTrace}");
+}
+
+static Bitmap DrawBoundingBoxes(Bitmap originalImage, List<Detection> detections)
+{
+    // Create a copy of the image to draw on
+    var annotated = new Bitmap(originalImage);
+    
+    using var graphics = Graphics.FromImage(annotated);
+    graphics.SmoothingMode = SmoothingMode.AntiAlias;
+    
+    // Set up drawing tools
+    using var pen = new Pen(Color.LimeGreen, 3);
+    using var brush = new SolidBrush(Color.FromArgb(180, 0, 255, 0)); // Semi-transparent green
+    using var font = new Font("Arial", 12, FontStyle.Bold);
+    using var textBrush = new SolidBrush(Color.White);
+    using var textBackground = new SolidBrush(Color.FromArgb(200, 0, 200, 0));
+    
+    // Draw each detection
+    for (int i = 0; i < detections.Count; i++)
+    {
+        var detection = detections[i];
+        var box = detection.BoundingBox;
+        
+        // Draw bounding box
+        graphics.DrawRectangle(pen, box.X, box.Y, box.Width, box.Height);
+        
+        // Draw label with confidence
+        string label = $"Person {i + 1}: {detection.Confidence:P0}";
+        var labelSize = graphics.MeasureString(label, font);
+        
+        // Draw label background
+        var labelRect = new RectangleF(
+            box.X,
+            box.Y - labelSize.Height - 4,
+            labelSize.Width + 8,
+            labelSize.Height + 4);
+        
+        // Make sure label is within image bounds
+        if (labelRect.Y < 0)
+        {
+            labelRect.Y = box.Y + 2;
+        }
+        
+        graphics.FillRectangle(textBackground, labelRect);
+        graphics.DrawString(label, font, textBrush, labelRect.X + 4, labelRect.Y + 2);
+    }
+    
+    return annotated;
+}
+
+static void CopyToClipboard(Bitmap image)
+{
+    // Windows clipboard requires STA thread
+    var thread = new Thread(() =>
+    {
+        System.Windows.Forms.Clipboard.SetImage(image);
+    });
+    
+    thread.SetApartmentState(ApartmentState.STA);
+    thread.Start();
+    thread.Join();
 }
