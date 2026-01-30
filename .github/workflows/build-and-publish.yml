@@ -1,0 +1,100 @@
+name: Build, Test, and Publish
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  NUGET_SOURCE: 'https://api.nuget.org/v3/index.json'
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+    
+    - name: Restore dependencies
+      run: dotnet restore
+    
+    - name: Build solution
+      run: dotnet build --configuration Release --no-restore
+    
+    - name: Run console tests
+      run: dotnet run --project Contoso.AI.PersonDetector.ConsoleTest --configuration Release --no-build
+    
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: TestResults/
+        if-no-files-found: ignore
+
+  publish-nuget:
+    needs: build-and-test
+    runs-on: windows-latest
+    permissions:
+      contents: write  # This is the magic line to allow creating releases
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+    
+    - name: Generate version number
+      id: get-version
+      shell: pwsh
+      run: |
+        # Generate version based on run number: 0.1.RUN_NUMBER-beta
+        $runNumber = "${{ github.run_number }}"
+        $newVersion = "0.1.$runNumber-beta"
+        
+        Write-Host "Generated version: $newVersion"
+        echo "NEW_VERSION=$newVersion" >> $env:GITHUB_OUTPUT
+    
+    - name: Restore dependencies
+      run: dotnet restore
+    
+    - name: Build solution
+      run: dotnet build --configuration Release --no-restore
+    
+    - name: Pack NuGet package
+      run: dotnet pack Contoso.AI.PersonDetector\Contoso.AI.PersonDetector.csproj --configuration Release --no-build -p:PackageVersion=${{ steps.get-version.outputs.NEW_VERSION }}
+    
+    - name: Publish to NuGet
+      run: dotnet nuget push "Contoso.AI.PersonDetector\bin\Release\*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source ${{ env.NUGET_SOURCE }} --skip-duplicate
+      env:
+        NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+    
+    - name: Create GitHub Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ steps.get-version.outputs.NEW_VERSION }}
+        release_name: Release v${{ steps.get-version.outputs.NEW_VERSION }}
+        body: |
+          Automated release of version ${{ steps.get-version.outputs.NEW_VERSION }}
+          
+          NuGet package published: https://www.nuget.org/packages/Contoso.AI.PersonDetector/${{ steps.get-version.outputs.NEW_VERSION }}
+        draft: false
+        prerelease: true
