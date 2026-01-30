@@ -114,13 +114,9 @@ namespace Contoso.AI
 
                 // Get the QNN EP provider info
                 var qnnProvider = catalog.FindAllProviders().FirstOrDefault(i => i.Name == "QNNExecutionProvider");
-                if (qnnProvider == null)
-                {
-                    throw new InvalidOperationException("QNN Execution Provider not available on this system");
-                }
 
                 // If its ReadyState is NotPresent, download the EP
-                if (qnnProvider.ReadyState == ExecutionProviderReadyState.NotPresent)
+                if (qnnProvider != null && qnnProvider.ReadyState == ExecutionProviderReadyState.NotPresent)
                 {
                     Debug.WriteLine("[PersonDetector] Downloading QNN Execution Provider...");
                     await qnnProvider.EnsureReadyAsync();
@@ -168,15 +164,15 @@ namespace Contoso.AI
             var epDevices = env.GetEpDevices();
 
             // Get the QNN NPU EP device
-            var qnnNpuEp = epDevices.FirstOrDefault(i => i.EpName == "QNNExecutionProvider" && i.HardwareDevice.Type == OrtHardwareDeviceType.NPU);
-            if (qnnNpuEp == null)
+            var ep = epDevices.FirstOrDefault(i => i.EpName == "QNNExecutionProvider" && i.HardwareDevice.Type == OrtHardwareDeviceType.NPU);
+            if (ep == null)
             {
-                throw new InvalidOperationException("QNN NPU Execution Provider device not found");
+                ep = epDevices.First(i => i.EpName == "CPUExecutionProvider");
             }
 
-            // Configure session options to use the QNN EP
+            // Configure session options to use the QNN EP or CPU EP
             var sessionOptions = new SessionOptions();
-            sessionOptions.AppendExecutionProvider(env, new[] { qnnNpuEp }, null);
+            sessionOptions.AppendExecutionProvider(env, new[] { ep }, null);
 
             // Create the inference session with the specified options
             var session = new InferenceSession(modelPath, sessionOptions);
