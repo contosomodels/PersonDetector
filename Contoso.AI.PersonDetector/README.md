@@ -7,7 +7,7 @@ AI-powered person detection for images using ONNX Runtime and the Yolo-X model.
 ## Features
 
 - Detects persons in images with bounding boxes and confidence scores
-- Performance and Efficiency modes for different hardware configurations
+- NPU acceleration using QNN Execution Provider
 - Async API for non-blocking operations
 - Automatic model download at build time
 
@@ -18,52 +18,86 @@ dotnet add package Contoso.AI.PersonDetector
 ```
 
 **Platform Requirements:**
-- Windows 10 version 2004 (build 19041) or later
-- Not compatible with: Linux, macOS, or older Windows versions
+- ? Windows 10 version 2004 (build 19041) or later
+- ? Not compatible with: Linux, macOS, or older Windows versions
 
 ## Model Download
 
 **Important**: This package uses a Yolo-X ONNX model that is **automatically downloaded at build time**.
 
-- The model is downloaded to `obj/Models/Yolo-X_w8a8.onnx` (not tracked by git)
+- The model is downloaded to `obj/Models/Yolo-X_w8a8/` (not tracked by git)
 - Download happens only once (cached for subsequent builds)
-- The model file is automatically copied to your output directory (`bin/.../Models/`)
+- The model files (`model.onnx` and `model.data`) are automatically copied to your output directory (`bin/.../Models/Yolo-X_w8a8/`)
 - **No need to add to `.gitignore`** - the `obj/` folder is already ignored by default
 
 ## Usage
 
 ```csharp
-using Contoso.AI.PersonDetector;
+using Contoso.AI;
+using System.Drawing;
 
-// Initialize (call once at startup)
-var readyResult = await PersonDetector.EnsureReadyAsync();
-if (readyResult.Status != AIFeatureReadyResultState.Success)
+// Check if the person detection feature is ready
+var readyState = PersonDetector.GetReadyState();
+
+if (readyState != AIFeatureReadyState.Ready)
 {
-    // Handle initialization failure
-    return;
+    // Prepare the feature (downloads QNN Execution Provider if needed)
+    var readyResult = await PersonDetector.EnsureReadyAsync();
+    if (readyResult.Status != AIFeatureReadyResultState.Success)
+    {
+        // Handle initialization failure
+        Console.WriteLine($"Failed to initialize: {readyResult.ExtendedError?.Message}");
+        return;
+    }
 }
 
 // Create detector instance
-var detector = await PersonDetector.CreateAsync(PerformanceMode.Performance);
+using var detector = await PersonDetector.CreateAsync();
 
-// Detect persons in an image
-var result = await detector.DetectAsync(imageData);
+// Load and detect people in an image
+using var bitmap = new Bitmap("path/to/image.png");
+var result = detector.DetectPeople(bitmap);
 
-Console.WriteLine($"Persons detected: {result.Detections.Count}");
-foreach (var detection in result.Detections)
+Console.WriteLine($"Total people detected: {result.TotalPeopleCount}");
+foreach (var person in result.People)
 {
-    Console.WriteLine($"  Confidence: {detection.Confidence:P}, Box: {detection.BoundingBox}");
+    Console.WriteLine($"  Confidence: {person.Confidence:P2}");
+    Console.WriteLine($"  Bounding Box: X={person.BoundingBox.X:F1}, Y={person.BoundingBox.Y:F1}, " +
+                      $"Width={person.BoundingBox.Width:F1}, Height={person.BoundingBox.Height:F1}");
 }
-Console.WriteLine($"Inference Time: {result.InferenceTimeMs}ms");
 
 // Don't forget to dispose
 detector.Dispose();
 ```
 
-## Performance Modes
+## API Reference
 
-- `PerformanceMode.Performance` - Optimized for speed (uses GPU/NPU if available)
-- `PerformanceMode.Efficiency` - Optimized for power efficiency (uses CPU)
+### PersonDetector Class
+
+**Static Methods:**
+- `AIFeatureReadyState GetReadyState()` - Checks if the person detection feature is ready
+- `Task<AIFeatureReadyResult> EnsureReadyAsync()` - Ensures dependencies are downloaded and ready
+- `Task<PersonDetector> CreateAsync()` - Creates a new detector instance with NPU acceleration
+
+**Instance Methods:**
+- `PersonDetectionResult DetectPeople(Bitmap bitmap)` - Detects people in the provided bitmap image
+
+### PersonDetectionResult Class
+
+**Properties:**
+- `List<Detection> People` - List of detected people
+- `int TotalPeopleCount` - Total count of detected people
+
+### Detection Class
+
+**Properties:**
+- `string ClassName` - Class name (e.g., "Person")
+- `float Confidence` - Confidence score (0.0 to 1.0)
+- `RectangleF BoundingBox` - Bounding box with X, Y, Width, Height
+
+## Performance
+
+The PersonDetector uses NPU (Neural Processing Unit) acceleration via the QNN Execution Provider for optimal performance on compatible hardware. The QNN EP is automatically downloaded on first use if not already present.
 
 ## Model Information
 
