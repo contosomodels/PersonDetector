@@ -7,7 +7,7 @@ AI-powered person detection for images using ONNX Runtime and the Yolo-X model.
 ## Features
 
 - Detects persons in images with bounding boxes and confidence scores
-- NPU acceleration using QNN Execution Provider
+- NPU acceleration using QNN Execution Provider (falls back to CPU on other devices)
 - Async API for non-blocking operations
 - Automatic model download at build time
 
@@ -18,8 +18,8 @@ dotnet add package Contoso.AI.PersonDetector
 ```
 
 **Platform Requirements:**
-- ? Windows 10 version 2004 (build 19041) or later
-- ? Not compatible with: Linux, macOS, or older Windows versions
+- Windows 10 version 2004 (build 19041) or later
+- Not compatible with: Linux, macOS, or older Windows versions
 
 ## Model Download
 
