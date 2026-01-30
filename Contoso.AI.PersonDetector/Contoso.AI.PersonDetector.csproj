@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<Platforms>AnyCPU;x64</Platforms>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Contoso.AI.AIFeatureCore" Version="0.0.1-beta" />
+		<PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.251106002" />
+		<PackageReference Include="System.Drawing.Common" Version="8.0.0" />
+		<PackageReference Include="System.Numerics.Tensors" Version="9.0.9" />
+	</ItemGroup>
+
+	<!-- Include .targets file in NuGet package so consuming projects download the model -->
+	<ItemGroup>
+		<None Include="build\Contoso.AI.PersonDetector.targets" Pack="true" PackagePath="build" />
+		<None Include="build\Contoso.AI.PersonDetector.targets" Pack="true" PackagePath="buildTransitive" />
+		<None Include="README.md" Pack="true" PackagePath="\" />
+	</ItemGroup>
+
+	<!-- Import targets file for direct project references -->
+	<Import Project="build\Contoso.AI.PersonDetector.targets" />
+
+</Project>
